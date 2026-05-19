@@ -324,6 +324,7 @@ final class MouseZoneMonitor {
     private var zonesContainingPointer = Set<String>()
     private var lastTriggerDate = Date.distantPast
     private var missionControlOpeningGraceUntil = Date.distantPast
+    private var missionControlWasActive = false
 
     init(
         settings: AppSettings,
@@ -360,6 +361,7 @@ final class MouseZoneMonitor {
         timer = nil
         zonesContainingPointer.removeAll()
         missionControlOpeningGraceUntil = .distantPast
+        missionControlWasActive = false
     }
 
     func currentZonesDescription() -> String {
@@ -381,6 +383,7 @@ final class MouseZoneMonitor {
         guard settings.enabled else {
             zonesContainingPointer.removeAll()
             missionControlOpeningGraceUntil = .distantPast
+            missionControlWasActive = false
             return
         }
 
@@ -388,10 +391,19 @@ final class MouseZoneMonitor {
         let zones = resolver.zones()
         let currentZoneIDs = Set(zones.filter { $0.containsPointer(pointer) }.map(\.id))
 
-        if shouldSuppressTriggerForMissionControl() {
+        if isMissionControlOpeningGraceActive() {
             zonesContainingPointer = currentZoneIDs
             return
         }
+
+        if missionControlState.isActive() {
+            missionControlWasActive = true
+            zonesContainingPointer.removeAll()
+            return
+        }
+
+        let justFinishedMissionControl = missionControlWasActive
+        missionControlWasActive = false
 
         let enteredZoneIDs = currentZoneIDs.subtracting(zonesContainingPointer)
 
@@ -402,7 +414,7 @@ final class MouseZoneMonitor {
         }
 
         let now = Date()
-        guard now.timeIntervalSince(lastTriggerDate) >= settings.cooldown else {
+        guard justFinishedMissionControl || now.timeIntervalSince(lastTriggerDate) >= settings.cooldown else {
             return
         }
 
@@ -415,8 +427,8 @@ final class MouseZoneMonitor {
         missionControlOpeningGraceUntil = Date().addingTimeInterval(0.25)
     }
 
-    private func shouldSuppressTriggerForMissionControl() -> Bool {
-        Date() < missionControlOpeningGraceUntil || missionControlState.isActive()
+    private func isMissionControlOpeningGraceActive() -> Bool {
+        Date() < missionControlOpeningGraceUntil
     }
 }
 
