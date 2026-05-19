@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Roundy",
+    name: "NotchMissionControl",
     platforms: [
         .macOS(.v13)
     ],
