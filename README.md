@@ -17,7 +17,7 @@ NotchMissionControl is a tiny macOS menu bar app that turns the real MacBook not
 
 ## Install
 
-Download `NotchMissionControl-1.0.0.zip` from the `v1.0.0` release, unzip it, and open `NotchMissionControl.app`.
+Download `NotchMissionControl-1.0.1.zip` from the latest release, unzip it, and open `NotchMissionControl.app`.
 
 For launch at login, add the app in macOS:
 

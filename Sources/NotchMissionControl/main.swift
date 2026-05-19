@@ -144,7 +144,11 @@ final class AppSettings {
         static let hitZoneSize = "hitZoneSize"
         static let triggerMethod = "triggerMethod"
         static let cooldown = "cooldown"
+        static let cooldownDefaultMigration = "cooldownDefaultMigration"
     }
+
+    private static let defaultCooldown: TimeInterval = 0.25
+    private static let previousDefaultCooldown: TimeInterval = 0.6
 
     private let defaults = UserDefaults.standard
     var onChange: (() -> Void)?
@@ -196,8 +200,16 @@ final class AppSettings {
             rawValue: defaults.string(forKey: Key.triggerMethod) ?? ""
         ) ?? .appFirst
 
-        let storedCooldown = defaults.double(forKey: Key.cooldown)
-        cooldown = storedCooldown > 0 ? storedCooldown : 0.6
+        if let storedCooldown = defaults.object(forKey: Key.cooldown) as? TimeInterval {
+            let shouldMigratePreviousDefault = !defaults.bool(forKey: Key.cooldownDefaultMigration)
+                && abs(storedCooldown - Self.previousDefaultCooldown) < 0.01
+            cooldown = shouldMigratePreviousDefault ? Self.defaultCooldown : storedCooldown
+        } else {
+            cooldown = Self.defaultCooldown
+        }
+
+        defaults.set(cooldown, forKey: Key.cooldown)
+        defaults.set(true, forKey: Key.cooldownDefaultMigration)
     }
 }
 
@@ -400,7 +412,7 @@ final class MouseZoneMonitor {
     }
 
     private func markMissionControlOpening() {
-        missionControlOpeningGraceUntil = Date().addingTimeInterval(0.8)
+        missionControlOpeningGraceUntil = Date().addingTimeInterval(0.25)
     }
 
     private func shouldSuppressTriggerForMissionControl() -> Bool {
@@ -644,10 +656,11 @@ final class StatusController: NSObject {
         let item = NSMenuItem(title: "Cooldown", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         let cooldowns: [(String, TimeInterval)] = [
+            ("150 ms", 0.15),
+            ("250 ms", 0.25),
             ("400 ms", 0.4),
             ("600 ms", 0.6),
-            ("800 ms", 0.8),
-            ("1200 ms", 1.2)
+            ("1000 ms", 1.0)
         ]
 
         for cooldown in cooldowns {
